@@ -7,7 +7,8 @@ public class SerialToInput : MonoBehaviour {
 	public static bool isSerialInit = false;
 
 	//rotation + button presses from the serial input
-	private Vector3 rotation;
+	private int[] baseRotations = new int[3];
+	private int[] rotation = new int[3];
 	private bool buttonAPressed;
 	private bool buttonBPressed;
 	private bool buttonAHeld;
@@ -16,9 +17,10 @@ public class SerialToInput : MonoBehaviour {
 	private float buttonBStart;
 	private bool buttonAHoldCheck;
 	private bool buttonBHoldCheck;
+	private bool doReset = true;
 
 
-	private bool debug;
+	private bool debug = false;
 
 
 
@@ -31,14 +33,17 @@ public class SerialToInput : MonoBehaviour {
 			Destroy (this.gameObject);
 		}
 		isSerialInit = true;
+
+		//Unit test for adjusting angles
+//		for (int i = -180; i <= 180; i++) {
+//			printDebug (adjustAngle (i-20, 180).ToString());
+//		}
 	}
 	
 	// Update is called once per frame
 	void Update () {
 		updateInputs (serialInput.getLine());
-		/*printDebug (buttonA);
-		printDebug (buttonB);
-		printDebug (rotation.ToString());*/
+		printDebug ((getAdjustedYaw()).ToString());
 	}
 
 	/// <summary>
@@ -48,7 +53,15 @@ public class SerialToInput : MonoBehaviour {
 	private void updateInputs(string s){
 		//updates the logic depending on the input of the form
 		//button,x,y,z
+
+			
 		try{
+			if (s.Equals ("Reset")) {
+				//do resets
+				doReset = true;
+				return;
+			}
+
 			char[] seperator = {','};
 			string[] splitString = s.Split(seperator,4);
 		// if any of them are null, exception will be thrown and the line will be ignored.
@@ -84,11 +97,21 @@ public class SerialToInput : MonoBehaviour {
 				
 				
 			}
-			string X = splitString[1];
-			string Y = splitString[2];
-			string Z = splitString[3];
 
-			rotation.Set((float) int.Parse(X),(float) int.Parse(Y), (float) int.Parse(Z));
+			string roll = splitString[1];
+			string pitch = splitString[2];
+			string yaw = splitString[3];
+
+			rotation[0] = int.Parse(roll);
+			rotation[1] = int.Parse(pitch);
+			rotation[2] = int.Parse(yaw);
+
+			if(doReset){
+				baseRotations[0] = int.Parse(roll);
+				baseRotations[1] = int.Parse(pitch);
+				baseRotations[2] = int.Parse(yaw);
+				doReset = false;
+			}
 
 
 		}catch(System.Exception){
@@ -168,18 +191,93 @@ public class SerialToInput : MonoBehaviour {
 		return this.buttonBHeld;
 	}
 
-	/// <summary>
-	/// Gets the rotation.
-	/// </summary>
-	/// <returns>The rotation.</returns>
-	public Vector3 getRotation(){
-		return this.rotation;
+	//-------------------------------------------//
+	//Returns the unadjusted roll/pitch/yaw values//
+	//-------------------------------------------//
+	private int getRoll(){
+		return this.rotation [0];
+	}
+
+	private int getPitch(){
+		return this.rotation [1];
+	}
+
+	private int getYaw(){
+		return this.rotation [2];
+	}
+	//-------------------------------------------//
+	//-------------------------------------------//
+	//-------------------------------------------//
+
+	//-------------------------------------------//
+	//Returns the adjusted roll/pitch/yaw values, adjusted with respect to the base rotation//
+	//Adds a deadzone at the extreme rotations to prevent accidental overrotating//
+	//-------------------------------------------//
+	private int getAdjustedRoll(){
+		//Roll goes from -180 degrees to +180
+		return adjustAngle(rotation[0] - baseRotations[0], 180);
+	}
+
+	private int getAdjustedPitch(){
+		//Pitch goes from -90 degrees to +90
+		return adjustAngle(rotation[1] - baseRotations[1], 90);
+	}
+
+	private int getAdjustedYaw(){
+		//Yaw goes from 0 degrees to 360
+
+		//Since the yaw is VERY sensitive, I decided to put a deadzone in the neutral position aswell//
+		if (Mathf.Abs (rotation [2] - baseRotations [2]) < 20) {
+			return 0;
+		} else if (rotation [2] - baseRotations [2] < -20) {
+			return adjustAngle(rotation[2] - baseRotations[2] + 20, 180);
+		}
+		else
+		return adjustAngle(rotation[2] - baseRotations[2] - 20, 180);
+	}
+
+	private int adjustAngle(int a, int limit){
+		int returnVal;
+		if (a > limit) {
+			returnVal = -limit + (limit - a);
+		} else if (a < -limit) {
+			returnVal = limit - (-limit - a);
+		} else {
+			returnVal = a;
+		}
+
+
+		//----------Deadzone------------//
+		if (returnVal > limit - limit / 20) {
+			return limit - limit / 20;
+		} else if (returnVal < -limit + limit / 20) {
+			return -limit + limit / 20;
+		} else {
+			return returnVal;
+		}
+	}
+
+	//-------------------------------------------//
+	//-------------------------------------------//
+	//-------------------------------------------//
+
+
+	//Returns the rotations as a Unity Vector3//
+	//Adjusts the rotations to match the Unity axes//
+	public Vector3 getRotations(){
+		//------The rotations must be slightly tweaked to match the Unity axes//
+		return new Vector3 (-getAdjustedPitch(), getAdjustedYaw(), -getAdjustedRoll());
 	}
 
 	private void printDebug(string s){
 		if (debug) {
 			Debug.Log (s);
 		}
+	}
+
+
+	public bool isSerialTimeOut(){
+		return serialInput.isTimingOut ();
 	}
 
 }
