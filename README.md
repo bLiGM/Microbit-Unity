@@ -1,7 +1,7 @@
 # Microbit-Unity
 Unity scripts to allow the BBC Microbit to be used as a Unity Controller
 
-**Note that these scripts current only work in Windows, but can be altered to work in other operating systems.**
+**Note that these scripts currently only work in Windows, but can be altered to work in other operating systems.**
 
 
 ### Installation
