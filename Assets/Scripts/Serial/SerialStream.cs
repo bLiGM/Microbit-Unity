@@ -3,28 +3,26 @@ using System.Collections;
 using System.IO.Ports;
 using System;
 
-
 public class SerialStream : MonoBehaviour {
+
+	public static bool isSerialStreamInit = false;
+
 	private SerialPort stream;
-	private string inline;
+	static private string inline;
 	public string COM;
 	public int BAUD;
 	public int timeout = 0;
-	public static bool isSerialStreamInit = false;
+
 
 	private float lastRecievedTime;
-
-	private bool timingOut = false;
-
+	static private bool timingOut = false;
 	private bool debug = false;
 
-	
+
 
 	// Use this for initialization
 	// Unity does not use constructors, but rather Start() and Awake()
-	void Start () {
-
-
+	void Awake () {
 		//if an instance of this object already exists, destroy this.
 		if (isSerialStreamInit == true) {
 			printDebug ("Destorying duplicate SerialStream");
@@ -40,7 +38,7 @@ public class SerialStream : MonoBehaviour {
 		}
 		openStream ();
 	}
-	
+
 	// Update is called once per frame
 	void Update () {
 		if ((inline = this.readStream ()) != null) {
@@ -54,7 +52,7 @@ public class SerialStream : MonoBehaviour {
 	//Send and Read CoRoutines
 	public IEnumerator AsyncReaduBit(float timeout, System.Action fail = null){
 		//timeout should be very small (microseconds);
-		float startTime = Time.time;
+		float startTime = Time.realtimeSinceStartup;
 		float currentTime = 0;
 		float diff = 0;
 
@@ -69,22 +67,22 @@ public class SerialStream : MonoBehaviour {
 				readLine = null;
 			}
 			if(readLine != null){
-				this.inline = readLine;
+				inline = readLine;
 				this.stream.BaseStream.Flush();
-				lastRecievedTime = Time.time;
+				lastRecievedTime = Time.realtimeSinceStartup;
 				timingOut = false;
 			}
 			else{
-				if((Time.time - lastRecievedTime)> 1f){
+				if((Time.realtimeSinceStartup - lastRecievedTime)> 1f){
 					//essentially a manual timeout
-					printDebug ((lastRecievedTime-Time.time).ToString());
+					printDebug ((lastRecievedTime-Time.realtimeSinceStartup).ToString());
 					timingOut = true;
 					StartCoroutine(retryConnection());
 				}
 				yield return new WaitForSeconds(0.016f);
 			}
 
-			currentTime = Time.time;
+			currentTime = Time.realtimeSinceStartup;
 			//difference in milliseconds
 			diff = (currentTime - startTime)*1000;
 		} while(diff < timeout);
@@ -97,19 +95,19 @@ public class SerialStream : MonoBehaviour {
 		}
 
 	}
-		
 
-	//return inline
-	public string getLine(){
-		return this.inline;
+
+	//return current line read by SerialPort
+	static public string getLine(){
+		return inline;
 	}
 
 	//pings uBit to send infomation
 	private void pinguBit(){
 		try{
-		//printDebug("Pinging uBit");
-		this.stream.WriteLine ("SEND");
-		this.stream.BaseStream.Flush ();
+			//printDebug("Pinging uBit");
+			this.stream.WriteLine ("SEND");
+			this.stream.BaseStream.Flush ();
 		}
 		catch(System.Exception e){
 			if (e is System.IO.IOException) {
@@ -142,7 +140,7 @@ public class SerialStream : MonoBehaviour {
 	private void openStream(){
 		printDebug ("Initialised");
 		try{
-		this.stream.Open();
+			this.stream.Open();
 		}
 		catch(System.IO.IOException e) {
 			printDebug ("Something went wrong with opening stream");
@@ -155,8 +153,8 @@ public class SerialStream : MonoBehaviour {
 	//Closing connection
 	void OnDisable(){
 		try{
-		this.stream.Close ();
-		printDebug("Closing Stream");
+			this.stream.Close ();
+			printDebug("Closing Stream");
 		}
 		catch(System.IO.IOException){
 		}
@@ -174,11 +172,11 @@ public class SerialStream : MonoBehaviour {
 					this.stream.Close ();
 					this.stream.Open ();
 				} catch (System.Exception) {
-				
+
 				}
 				yield return new WaitForSeconds (0.016f);
 			} while(!stream.IsOpen);
-	
+
 			printDebug ("Ending Retrys");
 
 			yield break;
@@ -187,7 +185,7 @@ public class SerialStream : MonoBehaviour {
 	}
 
 	//Returns if a timeout is occuring
-	public bool isTimingOut(){
+	static public bool isTimingOut(){
 		return timingOut;
 	}
 
