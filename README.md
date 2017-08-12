@@ -1,7 +1,7 @@
 # Microbit-Unity
 Unity scripts to allow the BBC Microbit to be used as a Unity Controller
 
-**Note that these scripts currently only work in Windows, but can be altered to work in other operating systems.**
+**Note that these scripts currently only work in Windows and OSX, but can be altered to work in other operating systems.**
 
 
 ### Installation
@@ -20,7 +20,7 @@ Inside the project there will be two prefabs:
 1. Create two Unity objects using the two prefabs above.
 2. Set the reference of the serial input in P1Input to the SerialToController script.
 3. Change the COM port to the one used by the Microbit on your machine (So far on all the machines
-I have tested, this is always COM3).
+I have tested, this is always COM3, on OSX you can find port by typing in ls /dev/tty.* in terminal, it should look something like: /dev/tty.usbmodem1412).
 4. Use the public get functions in the P1Input's SerialToInputs script to get the current x y z
 rotational values and the current status of the A and B buttons on the Microbit.
 
